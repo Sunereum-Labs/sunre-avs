@@ -1,0 +1,32 @@
+avs:
+  aggregator:
+    min_operators: 3
+    response_timeout: 60s
+    consensus_threshold: 0.67
+
+weather_apis:
+  openweathermap:
+    base_url: "https://api.openweathermap.org/data/2.5"
+    rate_limit: 60
+    api_key: ""  # Set via OPENWEATHERMAP_API_KEY env var
+  weatherapi:
+    base_url: "https://api.weatherapi.com/v1"
+    rate_limit: 60
+    api_key: ""  # Set via WEATHERAPI_API_KEY env var
+  tomorrowio:
+    base_url: "https://api.tomorrow.io/v4"
+    rate_limit: 60
+    api_key: ""  # Set via TOMORROWIO_API_KEY env var
+  visualcrossing:
+    base_url: "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline"
+    rate_limit: 60
+    api_key: ""  # Set via VISUALCROSSING_API_KEY env var
+  openmeteo:
+    base_url: "https://api.open-meteo.com/v1"
+    rate_limit: 60
+    api_key: ""  # No key required for Open-Meteo
+
+consensus:
+  min_sources: 3
+  mad_threshold: 2.5
+  cache_ttl: 300

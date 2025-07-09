@@ -5,7 +5,9 @@ go 1.23.6
 require (
 	github.com/Layr-Labs/hourglass-monorepo/ponos v0.0.0-20250516160557-195c62a908e3
 	github.com/Layr-Labs/protocol-apis v1.12.1
+	github.com/sirupsen/logrus v1.9.3
 	go.uber.org/zap v1.27.0
+	golang.org/x/time v0.5.0
 )
 
 require (

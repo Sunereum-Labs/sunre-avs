@@ -1,4 +1,4 @@
-# Weather Insurance AVS - Compelling Demo for Insurance & Claims
+# SunRe AVS - Demo for Insurance & Claims
 
 This AVS demonstrates how blockchain-based weather oracles can revolutionize insurance claims processing, making it instant, transparent, and fraud-proof.
 
@@ -109,26 +109,6 @@ Using EigenLayer AVS, we create a trustless system where:
   "time": "Instant verification and payout"
 }
 ```
-
-## 💰 Business Impact
-
-### For Insurers:
-- **70% reduction** in claims processing costs
-- **90% faster** claim resolution
-- **Zero** fraudulent weather claims
-- **Increased** customer satisfaction and retention
-
-### For Policyholders:
-- **Instant** payouts when conditions are met
-- **Transparent** and fair claim decisions
-- **No paperwork** or claim filing needed
-- **Lower premiums** due to reduced overhead
-
-### For the Ecosystem:
-- **New markets**: Previously uninsurable risks become viable
-- **Financial inclusion**: Smallholder farmers get access to insurance
-- **Climate resilience**: Better tools to manage weather risks
-- **DeFi integration**: Insurance as collateral for loans
 
 ## 🛠️ Running the Demo
 

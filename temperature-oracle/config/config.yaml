@@ -16,7 +16,7 @@ weather_apis:
   tomorrowio:
     base_url: "https://api.tomorrow.io/v4"
     rate_limit: 60
-    api_key: ""  # Set via TOMORROWIO_API_KEY env var
+    api_key: "8pDrv1hpHeamM4Cq2OWXFgKMYByz9wyY"  # Or set via TOMORROWIO_API_KEY env var
   visualcrossing:
     base_url: "https://weather.visualcrossing.com/VisualCrossingWebServices/rest/services/timeline"
     rate_limit: 60

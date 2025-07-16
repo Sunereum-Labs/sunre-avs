@@ -10,14 +10,14 @@ context:
       rpc_url: "http://localhost:8545"
       fork:
         block: 22475020
-        url: "https://eth.llamarpc.com"
+        url: "https://eth-mainnet.g.alchemy.com/v2/demo"
         block_time: 12
     l2:
       chain_id: 31337
       rpc_url: "http://localhost:8545"
       fork:
         block: 22475020
-        url: "https://eth.llamarpc.com"
+        url: "https://eth-mainnet.g.alchemy.com/v2/demo"
         block_time: 12
   # All key material (BLS and ECDSA) within this file should be used for local testing ONLY
   # ECDSA keys used are from Anvil's private key set

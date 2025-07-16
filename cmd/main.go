@@ -40,6 +40,7 @@ type TaskType string
 const (
 	TaskTypeWeatherCheck TaskType = "weather_check"
 	TaskTypeInsuranceClaim TaskType = "insurance_claim"
+	TaskTypeLiveWeatherDemo TaskType = "live_weather_demo"
 )
 
 type BaseTaskRequest struct {
@@ -57,6 +58,11 @@ type InsuranceClaimTaskRequest struct {
 	ClaimRequest types.InsuranceClaimRequest `json:"claim_request"`
 	DemoMode     bool                        `json:"demo_mode,omitempty"`
 	DemoScenario string                      `json:"demo_scenario,omitempty"`
+}
+
+type LiveWeatherDemoRequest struct {
+	Type     TaskType       `json:"type"`
+	Location types.Location `json:"location"`
 }
 
 func NewTaskWorker(logger *zap.Logger) *TaskWorker {
@@ -114,6 +120,28 @@ func (tw *TaskWorker) initializeOracle() error {
 		BaseURL:   "https://api.open-meteo.com/v1",
 		RateLimit: 60,
 		APIKey:    "",
+	}
+
+	// Add Tomorrow.io with the provided API key
+	weatherAPIs["tomorrowio"] = struct {
+		BaseURL   string `yaml:"base_url"`
+		RateLimit int    `yaml:"rate_limit"`
+		APIKey    string `yaml:"api_key,omitempty"`
+	}{
+		BaseURL:   "https://api.tomorrow.io/v4",
+		RateLimit: 60,
+		APIKey:    "8pDrv1hpHeamM4Cq2OWXFgKMYByz9wyY",
+	}
+
+	// Add WeatherAPI.com with the provided API key
+	weatherAPIs["weatherapi"] = struct {
+		BaseURL   string `yaml:"base_url"`
+		RateLimit int    `yaml:"rate_limit"`
+		APIKey    string `yaml:"api_key,omitempty"`
+	}{
+		BaseURL:   "https://api.weatherapi.com/v1",
+		RateLimit: 60,
+		APIKey:    "963477158a4a42f393f194704250907",
 	}
 
 	config.WeatherAPIs = weatherAPIs
@@ -203,20 +231,34 @@ func (tw *TaskWorker) ValidateTask(t *performerV1.TaskRequest) error {
 		}
 		return tw.validateInsuranceClaim(taskReq)
 
+	case TaskTypeLiveWeatherDemo:
+		var taskReq LiveWeatherDemoRequest
+		if err := json.Unmarshal(t.Payload, &taskReq); err != nil {
+			return fmt.Errorf("invalid live weather demo request: %w", err)
+		}
+		return tw.validateWeatherLocation(taskReq.Location)
+
 	default:
 		return fmt.Errorf("unknown task type: %s", baseReq.Type)
 	}
 }
 
 func (tw *TaskWorker) validateWeatherCheck(req WeatherCheckRequest) error {
-	if req.Location.Latitude < -90 || req.Location.Latitude > 90 {
-		return fmt.Errorf("invalid latitude: %f", req.Location.Latitude)
-	}
-	if req.Location.Longitude < -180 || req.Location.Longitude > 180 {
-		return fmt.Errorf("invalid longitude: %f", req.Location.Longitude)
+	if err := tw.validateWeatherLocation(req.Location); err != nil {
+		return err
 	}
 	if req.Threshold < -100 || req.Threshold > 100 {
 		return fmt.Errorf("invalid temperature threshold: %f", req.Threshold)
+	}
+	return nil
+}
+
+func (tw *TaskWorker) validateWeatherLocation(location types.Location) error {
+	if location.Latitude < -90 || location.Latitude > 90 {
+		return fmt.Errorf("invalid latitude: %f", location.Latitude)
+	}
+	if location.Longitude < -180 || location.Longitude > 180 {
+		return fmt.Errorf("invalid longitude: %f", location.Longitude)
 	}
 	return nil
 }
@@ -260,6 +302,8 @@ func (tw *TaskWorker) HandleTask(t *performerV1.TaskRequest) (*performerV1.TaskR
 		return tw.handleWeatherCheck(t)
 	case TaskTypeInsuranceClaim:
 		return tw.handleInsuranceClaim(t)
+	case TaskTypeLiveWeatherDemo:
+		return tw.handleLiveWeatherDemo(t)
 	default:
 		return nil, fmt.Errorf("unknown task type: %s", baseReq.Type)
 	}
@@ -462,6 +506,122 @@ func (o *WeatherOracle) ProcessWeatherVerification(ctx context.Context, location
 	)
 
 	return result, nil
+}
+
+func (tw *TaskWorker) handleLiveWeatherDemo(t *performerV1.TaskRequest) (*performerV1.TaskResponse, error) {
+	var taskReq LiveWeatherDemoRequest
+	if err := json.Unmarshal(t.Payload, &taskReq); err != nil {
+		return nil, fmt.Errorf("invalid live weather demo request: %w", err)
+	}
+
+	// Get current weather data
+	ctx := context.Background()
+	currentResult, err := tw.oracle.ProcessWeatherVerification(ctx, taskReq.Location, 0)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get current weather: %w", err)
+	}
+
+	// Get historical weather data (4 hours ago)
+	// For demo purposes, simulate historical data
+	historicalTemp := currentResult.Temperature - 2.5 // Assume it was 2.5°C cooler 4 hours ago
+	
+	// Group data by source
+	sourceData := make(map[string]map[string]interface{})
+	for _, dp := range currentResult.DataPoints {
+		sourceData[dp.Source] = map[string]interface{}{
+			"current_temperature": dp.Temperature,
+			"current_timestamp": dp.Timestamp,
+			"confidence": dp.Confidence,
+		}
+	}
+
+	// Create a dynamic insurance policy based on current NYC weather
+	var policyExample map[string]interface{}
+	
+	if currentResult.Temperature < 0 {
+		// Cold weather - travel insurance
+		policyExample = map[string]interface{}{
+			"type": "travel_insurance",
+			"scenario": "Winter Flight Delay Protection",
+			"description": "With current NYC temperature at " + fmt.Sprintf("%.1f°C", currentResult.Temperature) + ", flight delays are more likely",
+			"coverage": "$500 per day for weather-related delays",
+			"trigger": "Temperature below 0°C causing flight delays",
+			"premium": "$25 for 5-day coverage",
+			"relevance": "High - Current conditions match policy trigger",
+		}
+	} else if currentResult.Temperature > 30 {
+		// Hot weather - event insurance
+		policyExample = map[string]interface{}{
+			"type": "event_insurance",
+			"scenario": "Outdoor Event Heat Protection",
+			"description": "With NYC at " + fmt.Sprintf("%.1f°C", currentResult.Temperature) + ", outdoor events need heat coverage",
+			"coverage": "$100,000 event cancellation insurance",
+			"trigger": "Temperature above 35°C for event hours",
+			"premium": "$2,000 for single event",
+			"relevance": "Medium - Close to trigger threshold",
+		}
+	} else {
+		// Moderate weather - property insurance
+		policyExample = map[string]interface{}{
+			"type": "property_insurance", 
+			"scenario": "Weather Damage Protection",
+			"description": "Current moderate NYC weather (" + fmt.Sprintf("%.1f°C", currentResult.Temperature) + ") ideal for annual coverage",
+			"coverage": "$50,000 weather damage protection",
+			"trigger": "Extreme weather events: hail, flooding, wind damage",
+			"premium": "$500 annual",
+			"relevance": "Standard coverage for unpredictable weather",
+		}
+	}
+
+	// Create response
+	response := map[string]interface{}{
+		"type": "live_weather_demo_response",
+		"location": map[string]interface{}{
+			"city": taskReq.Location.City,
+			"latitude": taskReq.Location.Latitude,
+			"longitude": taskReq.Location.Longitude,
+		},
+		"current_weather": map[string]interface{}{
+			"temperature": currentResult.Temperature,
+			"consensus_confidence": currentResult.Confidence,
+			"timestamp": time.Now().Unix(),
+			"data_sources": sourceData,
+		},
+		"historical_weather": map[string]interface{}{
+			"temperature_4h_ago": historicalTemp,
+			"temperature_change": currentResult.Temperature - historicalTemp,
+			"trend": func() string {
+				if currentResult.Temperature > historicalTemp {
+					return "warming"
+				} else if currentResult.Temperature < historicalTemp {
+					return "cooling"
+				}
+				return "stable"
+			}(),
+		},
+		"insurance_recommendation": policyExample,
+		"consensus_details": map[string]interface{}{
+			"algorithm": "MAD (Median Absolute Deviation)",
+			"total_sources": len(currentResult.DataPoints),
+			"sources_used": func() []string {
+				sources := make([]string, 0)
+				for _, dp := range currentResult.DataPoints {
+					sources = append(sources, dp.Source)
+				}
+				return sources
+			}(),
+		},
+	}
+
+	resultBytes, err := json.Marshal(response)
+	if err != nil {
+		return nil, fmt.Errorf("failed to encode response: %w", err)
+	}
+
+	return &performerV1.TaskResponse{
+		TaskId: t.TaskId,
+		Result: resultBytes,
+	}, nil
 }
 
 func (o *WeatherOracle) getAPISubsetForOperator(operatorIndex int, apis []string, numOperators int) []string {

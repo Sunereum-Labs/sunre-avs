@@ -83,17 +83,26 @@ func (c *ConsensusEngine) filterOutliers(dataPoints []types.DataPoint, median, m
 	filtered := make([]types.DataPoint, 0)
 	
 	madThreshold := c.madThreshold
+	
+	// Set minimum threshold to avoid over-filtering when MAD is very small
+	// This ensures we allow reasonable temperature variations (at least 1°C)
+	minThreshold := 1.0 // Allow at least 1°C deviation
+	
+	// If MAD is 0 (all values are identical), use a small value
 	if mad == 0 {
 		mad = 0.01
 	}
 	
+	// Calculate the effective threshold
+	effectiveThreshold := math.Max(madThreshold*mad, minThreshold)
+	
 	for _, dp := range dataPoints {
 		deviation := math.Abs(dp.Temperature - median)
-		if deviation <= madThreshold*mad {
+		if deviation <= effectiveThreshold {
 			filtered = append(filtered, dp)
 		} else {
 			log.Warnf("Filtered outlier from %s: %.2f (median: %.2f, deviation: %.2f, threshold: %.2f)",
-				dp.Source, dp.Temperature, median, deviation, madThreshold*mad)
+				dp.Source, dp.Temperature, median, deviation, effectiveThreshold)
 		}
 	}
 	

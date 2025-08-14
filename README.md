@@ -450,6 +450,6 @@ BUSL-1.1 - Business Source License 1.1
 
 ## Acknowledgments
 
-Built with [EigenLayer DevKit](https://eigenlayer.xyz) - making AVS development accessible to everyone.
+Built with [EigenLayer DevKit]([https://eigenlayer.xyz](https://github.com/Layr-Labs/devkit-cli)) - making AVS development accessible to everyone.
 
 ---

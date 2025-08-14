@@ -8,7 +8,7 @@ import {TaskAVSRegistrarBase} from "@hourglass-monorepo/src/avs/TaskAVSRegistrar
  * @title TaskAVSRegistrar
  * @author Sunereum Labs
  * @notice SunRe AVS - Parametric Weather Insurance Platform
- * @dev Exemplary DevKit implementation following Hourglass architecture
+ * @dev DevKit implementation following Hourglass architecture
 
  * Key features inherited from DevKit:
  * - Operator registration/deregistration

@@ -1,6 +1,21 @@
-version: 0.0.1
+# SunRe AVS Configuration
+# Minimal configuration leveraging DevKit defaults
+
+version: 0.1.0
 config:
   project:
     name: "sunre"
-    version: "0.1.0"
+    version: "1.0.0"
     context: "devnet"
+    
+  # DevKit standard AVS configuration
+  avs:
+    min_operators: 3
+    response_timeout: 60s
+    consensus_threshold: 0.67
+    
+  # Weather verification settings
+  weather:
+    min_data_sources: 3
+    mad_threshold: 2.5
+    cache_ttl: 300

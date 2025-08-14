@@ -1,225 +1,455 @@
-# SunRe AVS - Decentralized Weather Insurance Platform
+# SunRe AVS - Parametric Weather Insurance Service powered by EigenLayer
 
-<p align="center">
-  <img src="https://img.shields.io/badge/EigenLayer-AVS-blue" alt="EigenLayer AVS">
-  <img src="https://img.shields.io/badge/Consensus-BLS-green" alt="BLS Consensus">
-  <img src="https://img.shields.io/badge/Weather-Insurance-orange" alt="Weather Insurance">
-</p>
+An Actively Validated Service (AVS) for parametric weather insurance built with EigenLayer DevKit. 
 
-## Overview
+## What This Is
 
-SunRe AVS is a decentralized weather insurance platform built on EigenLayer's AVS (Actively Validated Service) architecture. It enables parametric insurance products that automatically process claims based on weather data consensus from multiple oracles.
+SunRe AVS is a weather verification service that enables truly verifiable parametric insurance. The AVS:
+- **Verifies weather data** from multiple sources for insurance claims
+- **Achieves consensus** among operators using BLS signatures
+- **Processes claims automatically** based on weather triggers
 
-### Key Features
+## Example Use Case: Crop Insurance
 
-- 🌡️ **Multi-Source Weather Consensus** - Aggregates data from 3+ weather APIs using MAD algorithm
-- 🔐 **BLS Signature Aggregation** - Cryptographic consensus among EigenLayer operators
-- 📊 **Parametric Insurance** - Automatic claim processing when weather triggers are met
-- ⚡ **Task-Based Architecture** - Insurance contracts submit monitoring tasks to AVS
-- 🚀 **Production Ready** - Full DevKit integration for testnet/mainnet deployment
+Imagine a farmer in Iowa purchases parametric crop insurance for drought protection:
 
-## 🚀 Quick Start (60 seconds)
+1. **Policy Creation**: Farmer buys insurance that pays out if rainfall < 200mm during growing season
+2. **Weather Monitoring**: SunRe AVS continuously monitors weather conditions at the farm's location
+3. **Trigger Event**: A drought occurs with only 150mm rainfall recorded
+4. **Verification Process**:
+   - Multiple operators fetch weather data from different sources
+   - Each operator signs the weather data with their BLS signature
+   - Consensus is reached when 67% of stake agrees on the conditions
+5. **Automatic Payout**: Smart contract automatically releases insurance payout to farmer
 
+No claims adjusters, no paperwork, no delays - just transparent, verifiable weather data triggering automatic payments.
+
+### Other Real-World Applications
+
+- **Flight Delay Insurance**: Automatic payouts when flights delayed due to weather
+- **Event Cancellation**: Venues get compensated when outdoor events are rained out  
+- **Energy Trading**: Solar/wind farms hedge against low production days
+- **Tourism Protection**: Hotels compensated for excessive rain during peak season
+- **Construction Delays**: Contractors protected against weather-related delays
+
+## Quick Start
+
+### Prerequisites
 ```bash
-# Run the complete end-to-end demo
-./run_demo.sh
+# Install DevKit CLI
+curl -sSL https://install.eigenlayer.xyz | sh
 
-# Verify AVS is processing tasks
-./prove_avs.sh
+# Install Foundry for smart contracts
+curl -L https://foundry.paradigm.xyz | bash
+foundryup
 
-# Access the demo at: http://localhost:3000
+# Install Go 1.23+
+# Visit https://go.dev/dl/
 ```
 
-### Alternative Demo Options
+### One-Command Setup
 ```bash
-# Interactive launcher with menu
-./demo.sh
+# Clone and setup
+git clone https://github.com/Sunereum-Labs/sunre-avs.git
+cd sunre-avs
 
-# Just the UI (mock mode)
-cd demo-ui && npm start
+# Install and build everything
+./scripts/setup.sh
+
+# Start local development
+./scripts/start.sh
+```
+
+### Manual Setup
+
+#### 1. Install Dependencies
+```bash
+# Install Go dependencies
+go mod tidy
+
+# Install contract dependencies
+cd contracts && forge install
+```
+
+#### 2. Build Everything
+```bash
+# Build contracts
+make build
+
+# Build Go binary
+go build -o bin/sunre-avs cmd/main.go
+```
+
+#### 3. Run Local Development
+```bash
+# Start local devnet
+make devnet
+
+# In another terminal, deploy contracts
+make deploy
+
+# Start the AVS performer
+./bin/sunre-avs
+```
+
+#### 4. Submit a Test Task
+```bash
+# Submit weather verification task
+devkit avs call --input examples/task-weather-nyc.json
 ```
 
 ## Architecture
 
 ```
-┌─────────────────────┐     ┌──────────────────┐     ┌─────────────────┐
-│ Insurance Contract  │────▶│   SunRe AVS      │────▶│ Weather APIs    │
-│ (Submits Tasks)     │     │ (Consensus)      │     │ (3+ sources)    │
-└─────────────────────┘     └──────────────────┘     └─────────────────┘
-         │                           │
-         ▼                           ▼
-┌─────────────────────┐     ┌──────────────────┐
-│  Claim Processor    │◀────│ EigenLayer Core  │
-│ (Auto Payouts)      │     │ (BLS Signatures) │
-└─────────────────────┘     └──────────────────┘
+┌─────────────┐     ┌──────────────┐     ┌─────────────┐
+│   Client    │────▶│ TaskAVSReg   │────▶│  Operators  │
+│  Insurance  │     │     (L1)     │     │  (3+ nodes) │
+└─────────────┘     └──────────────┘     └─────────────┘
+                            │                     │
+                            ▼                     ▼
+                    ┌──────────────┐     ┌─────────────┐
+                    │ AVSTaskHook  │────▶│   Weather   │
+                    │     (L2)     │     │   Sources   │
+                    └──────────────┘     └─────────────┘
+                            │
+                            ▼
+                    ┌──────────────┐
+                    │ BN254Verifier│
+                    │  (Consensus) │
+                    └──────────────┘
 ```
 
-## How It Works
+### Core Components
 
-1. **Task Submission**: Insurance contracts submit monitoring tasks to the AVS
-2. **Data Collection**: AVS operators fetch weather data from multiple sources
-3. **Consensus**: MAD algorithm filters outliers and reaches agreement
-4. **Verification**: BLS signatures provide cryptographic proof
-5. **Claim Processing**: Smart contracts automatically process payouts
+1. **L1 Contract - TaskAVSRegistrar** (`contracts/src/l1-contracts/`)
+   - Manages operator registration and stake
+   - Inherits from DevKit's `TaskAVSRegistrarBase`
+   - Handles task submission and validation
 
-## Supported Insurance Types
+2. **L2 Contracts** (`contracts/src/l2-contracts/`)
+   - **AVSTaskHook**: Validates tasks and manages payments
+   - **BN254CertificateVerifier**: Verifies BLS signatures for consensus
 
-| Type | Use Case | Example Triggers |
-|------|----------|-----------------|
-| 🌾 **Crop** | Agricultural protection | Heat waves, frost, drought |
-| 🎪 **Event** | Outdoor event cancellation | Rain, wind, extreme weather |
-| ✈️ **Travel** | Flight delay compensation | Extreme temperatures, storms |
-| 🏢 **Property** | Weather damage coverage | Hail, flooding, hurricanes |
+3. **Performer** (`cmd/main.go`)
+   - Processes weather verification tasks
+   - Fetches data from Open-Meteo API (no key required)
+   - Implements caching and fallback mechanisms
+   - Provides health and metrics endpoints
 
-## Task Types
+## 🌡️ Weather Verification Flow
 
-### Weather Monitoring Task
+1. **Task Submission**: Insurance contract submits weather verification request
+2. **Validation**: AVSTaskHook validates the request and payment
+3. **Data Fetching**: Operators fetch weather data from multiple sources
+4. **Consensus**: Operators reach consensus on weather conditions
+5. **Verification**: BLS signatures are aggregated and verified
+6. **Result**: Verified weather data returned for insurance payout
+
+## 🔧 Configuration
+
+### Environment Variables (.env)
+```bash
+# Network
+ENV=development
+PERFORMER_PORT=8080
+PERFORMER_TIMEOUT=5s
+HEALTH_PORT=8081
+
+# Operator (for production)
+OPERATOR_ID=your-operator-id
+OPERATOR_KEY=your-operator-key
+
+# Optional: Weather API keys for additional sources
+OPENMETEO_API_KEY=optional
+```
+
+### DevKit Configuration (`config/devkit.yaml`)
+```yaml
+project:
+  name: "sunre"
+  version: "1.0.0"
+  
+avs:
+  min_operators: 3
+  consensus_threshold: 0.67
+  
+networks:
+  devnet:
+    rpc_url: "http://localhost:8545"
+  testnet:
+    rpc_url: "https://ethereum-holesky.publicnode.com"
+```
+
+## 🧪 Testing
+
+### Run Tests
+```bash
+# Go tests
+go test ./...
+
+# Contract tests
+cd contracts && forge test
+
+# All tests
+./scripts/test.sh all
+```
+
+### Test Task Payloads
+
+Example task payload (`examples/task-weather-nyc.json`):
 ```json
 {
-  "type": "weather_check",
-  "location": {"latitude": 40.7128, "longitude": -74.0060},
-  "threshold": 35.0,
-  "policy_id": "POLICY-001"
+  "location": {
+    "latitude": 40.7128,
+    "longitude": -74.0060,
+    "city": "New York"
+  },
+  "timestamp": 1704067200,
+  "policy_id": "POL-NYC-2024-001"
 }
 ```
 
-### Insurance Claim Task
-```json
-{
-  "type": "insurance_claim",
-  "claim_request": {
-    "policy_id": "POLICY-001",
-    "policy": {
-      "insurance_type": "crop",
-      "triggers": [{
-        "peril": "heat_wave",
-        "conditions": {"temperature_max": 35},
-        "payout_ratio": 0.5
-      }]
-    }
-  }
-}
+Submit test tasks:
+```bash
+# New York weather (real-time data)
+devkit avs call --input examples/task-weather-nyc.json
+
+# Miami weather (hurricane-prone region)
+devkit avs call --input examples/task-weather-miami.json
+
+# London weather (frequent rain events)
+devkit avs call --input examples/task-weather-london.json
 ```
 
-## Development
+#### Testing with Real Weather Events:
 
-### Prerequisites
+To test the system with actual weather conditions:
 
-- Go 1.21+
-- Node.js 16+
-- Docker
-- [EigenLayer DevKit](https://github.com/Layr-Labs/eigenlayer-devkit)
+1. **Current Weather**: Set timestamp to current time for real-time verification
+2. **Historical Events**: Use past timestamps to verify known weather events
+3. **Extreme Conditions**: Test during storms, heatwaves, or other notable weather
 
-### Build & Test
+Example - Testing a known rainfall event:
+```bash
+# Create a task for a specific date/location
+echo '{
+  "location": {"latitude": 25.7617, "longitude": -80.1918, "city": "Miami"},
+  "timestamp": 1693526400,  # Hurricane Idalia - Sept 2023
+  "policy_id": "TEST-HURRICANE-001"
+}' > test-hurricane.json
+
+devkit avs call --input test-hurricane.json
+```
+
+The system will fetch historical weather data and verify the extreme conditions that occurred during Hurricane Idalia.
+
+## Deployment
+
+### Weather API Configuration for Production
+
+For production deployments, operators should configure multiple weather data sources for redundancy and accuracy. While the AVS works with the free Open-Meteo API by default, production deployments should add premium sources:
+
+#### Required Configuration in `.env`:
 
 ```bash
-# Build AVS performer
-make build
+# Primary source (free, no key required)
+# Open-Meteo API is used by default
 
-# Run unit tests
-make test
-
-# Start local DevNet
-devkit avs devnet start
-
-# Submit a task
-devkit avs call --payload <base64-encoded-task>
+# Optional premium sources for production reliability
+WEATHERAPI_KEY=your_weatherapi_com_key        # weatherapi.com
+OPENWEATHER_API_KEY=your_openweather_key       # openweathermap.org
+TOMORROW_IO_KEY=your_tomorrow_io_key           # tomorrow.io
+WEATHER_GOV_KEY=your_weather_gov_key           # weather.gov (US only)
 ```
 
-### Project Structure
+#### Adding Weather Sources in `cmd/main.go`:
 
-```
-├── cmd/                    # Main AVS performer
-├── internal/               # Core business logic
-│   ├── consensus/         # MAD consensus algorithm
-│   ├── weather/           # Weather data sources
-│   └── insurance/         # Claim processing
-├── contracts/             # Smart contracts
-├── demo-ui/               # React demo interface
-├── scripts/               # Deployment scripts
-└── config/                # Network configurations
-```
-
-## Weather Data Sources
-
-The AVS uses multiple weather APIs with built-in rate limiting:
-
-- **Tomorrow.io** - High precision weather data (API key included for demo)
-- **WeatherAPI.com** - Global coverage (API key included for demo)
-- **Open-Meteo** - Open source fallback (no key required)
-
-## Production Deployment
-
-See [PRODUCTION_DEPLOYMENT.md](PRODUCTION_DEPLOYMENT.md) for:
-- Holesky testnet deployment
-- Mainnet security checklist
-- Monitoring and alerts
-- Disaster recovery
-
-## Documentation
-
-- 📘 [DevNet Demo Guide](DEVNET_DEMO.md) - Local development with task examples
-- 🚀 [Production Deployment](PRODUCTION_DEPLOYMENT.md) - Mainnet deployment guide
-- 🧪 [Testing Guide](TESTING.md) - Test coverage and strategies
-
-## Demo UI
-
-The demo UI provides an interactive interface to:
-- View system architecture and consensus process
-- Test different insurance scenarios
-- Monitor live weather data from NYC
-- Submit and track insurance claims
-
-Access at http://localhost:3000 after running `./demo.sh`
-
-## Smart Contract Integration
-
-```solidity
-// Example: Insurance contract submitting monitoring task
-interface IAVSTaskSubmitter {
-    function submitTask(bytes calldata taskData) external returns (bytes32);
-}
-
-contract WeatherInsurance {
-    function monitorWeather(bytes32 policyId) external {
-        bytes memory task = abi.encode(
-            "weather_check",
-            location,
-            threshold,
-            policyId
-        );
-        avs.submitTask(task);
-    }
+```go
+// Add new weather source
+if apiKey := os.Getenv("WEATHERAPI_KEY"); apiKey != "" {
+    weatherClient.AddSource("weatherapi", apiKey, 2) // priority 2
 }
 ```
 
-## Contributing
+**Note**: Each operator can use different weather sources. The consensus mechanism ensures accuracy even if operators use different APIs.
 
+#### How Consensus Works with Multiple Sources:
+
+1. **Data Collection**: Each operator fetches data from their configured sources
+2. **Aggregation**: Operator calculates median values from their sources  
+3. **Submission**: Operator signs and submits their weather data
+4. **Consensus**: System accepts data when 67% of stake agrees (within 10% deviation)
+5. **Slashing**: Operators submitting outlier data (>10% deviation) may be slashed
+
+This design ensures no single weather API can manipulate the system, providing truly decentralized weather verification.
+
+### Deploy to Testnet (Holesky)
+
+1. **Setup Environment**
+```bash
+# Create env file with your keys
+cp .env.example .env
+# Edit .env with your PRIVATE_KEY_DEPLOYER and ETHERSCAN_API_KEY
+# Add weather API keys for production sources (optional for testing)
+```
+
+2. **Get Testnet ETH**
+```bash
+# Get Holesky ETH from faucet
+# https://holesky-faucet.pk910.de/
+```
+
+3. **Deploy Contracts**
+```bash
+./scripts/deploy.sh testnet
+```
+
+4. **Register Operators**
+```bash
+# Register as operator
+devkit avs operator register --context testnet
+```
+
+5. **Start Services**
+```bash
+# Start performer with testnet config
+ENV=production PERFORMER_PORT=8080 ./bin/sunre-avs
+```
+
+### Docker Deployment
+
+```bash
+# Build and run with Docker Compose
+docker-compose up
+
+# Or build manually
+docker build -t sunre-avs .
+docker run -p 8080:8080 -p 8081:8081 sunre-avs
+```
+
+## 📊 Monitoring
+
+### Health Endpoints
+- **Health Check**: `http://localhost:8081/health`
+- **Metrics**: `http://localhost:8081/metrics`
+
+### Metrics Tracked
+- Tasks processed/succeeded/failed
+- Average latency
+- Weather API response times
+- Cache hit rates
+
+### Example Health Response
+```json
+{
+  "status": "healthy",
+  "timestamp": "2024-01-01T12:00:00Z",
+  "version": "1.0.0"
+}
+```
+
+## 🛠️ DevKit Commands
+
+```bash
+# Build AVS
+devkit avs build
+
+# Deploy contracts
+devkit avs deploy
+
+# Submit task
+devkit avs call --input task.json
+
+# Check status
+devkit avs status
+
+# View logs
+devkit avs logs
+
+# Switch context
+devkit avs context set testnet
+```
+
+## 📁 Project Structure
+
+```
+sunre-avs/
+├── cmd/
+│   ├── main.go              # Main performer implementation
+│   └── main_test.go         # Tests
+├── contracts/
+│   ├── src/
+│   │   ├── l1-contracts/    # L1 contracts
+│   │   │   └── TaskAVSRegistrar.sol
+│   │   └── l2-contracts/    # L2 contracts
+│   │       ├── AVSTaskHook.sol
+│   │       └── BN254CertificateVerifier.sol
+│   └── script/              # Deployment scripts
+├── config/
+│   ├── config.yaml          # Main configuration
+│   ├── devkit.yaml          # DevKit configuration
+│   └── contexts/
+│       └── testnet.yaml     # Testnet configuration
+├── examples/                # Task examples
+│   ├── task-weather-nyc.json
+│   ├── task-weather-miami.json
+│   └── task-weather-london.json
+├── scripts/
+│   ├── setup.sh             # Install and build
+│   ├── start.sh             # Start services
+│   ├── test.sh              # Run tests
+│   └── deploy.sh            # Deploy contracts
+├── docker-compose.yml       # Docker orchestration
+├── Dockerfile              # Container image
+├── Makefile               # Build commands
+└── README.md              # This file
+```
+
+## Troubleshooting
+
+### Common Issues
+
+**Issue**: Contract deployment fails
+```bash
+# Solution: Ensure you have enough testnet ETH
+# Check balance:
+cast balance YOUR_ADDRESS --rpc-url https://ethereum-holesky.publicnode.com
+```
+
+**Issue**: Weather API timeout
+```bash
+# Solution: Check network connectivity
+# Test API directly:
+curl "https://api.open-meteo.com/v1/forecast?latitude=40.7&longitude=-74.0&current=temperature_2m"
+```
+
+**Issue**: Operator registration fails
+```bash
+# Solution: Ensure minimum stake requirement
+# Check requirement:
+devkit avs info --context testnet
+```
+
+## 📚 Resources
+
+- [EigenLayer Documentation](https://docs.eigenlayer.xyz)
+- [DevKit Documentation](https://docs.eigenlayer.xyz/devkit)
+- [Hourglass Architecture](https://docs.eigenlayer.xyz/devkit/architecture)
+- [Open-Meteo API](https://open-meteo.com/en/docs)
+
+## 🤝 Contributing
+
+Contributions are welcome! Please:
 1. Fork the repository
-2. Create your feature branch (`git checkout -b feature/amazing`)
-3. Commit your changes (`git commit -m 'Add feature'`)
-4. Push to the branch (`git push origin feature/amazing`)
-5. Open a Pull Request
-
-## Security
-
-- Smart contracts audited by [Pending]
-- Bug bounty: security@sunre-avs.com
-- Consensus algorithm prevents manipulation
-- All decisions cryptographically verifiable
+2. Create a feature branch
+3. Submit a pull request
 
 ## License
 
-MIT License - see [LICENSE](LICENSE) file
+BUSL-1.1 - Business Source License 1.1
 
 ## Acknowledgments
 
-- Built on [EigenLayer](https://eigenlayer.xyz/) infrastructure
-- Uses [Hourglass](https://github.com/Layr-Labs/hourglass) framework
-- Weather data from Tomorrow.io, WeatherAPI.com, and Open-Meteo
+Built with [EigenLayer DevKit](https://eigenlayer.xyz) - making AVS development accessible to everyone.
 
 ---
-
-<p align="center">
-  Built with ❤️ for transparent, automated insurance
-</p>

@@ -1,26 +1,48 @@
-# syntax=docker/dockerfile:1.3
+# SunRe AVS Performer Docker Image
+FROM golang:1.23-alpine AS builder
 
-FROM golang:1.23.6-bookworm AS build
+# Install build dependencies
+RUN apk add --no-cache git make
 
-RUN apt-get update
+WORKDIR /app
 
-WORKDIR /build
+# Copy go mod files
+COPY go.mod go.sum ./
 
-# Setup Git + known_hosts + env
-RUN --mount=type=ssh git config --global url."git@github.com:".insteadOf "https://github.com/"
-RUN mkdir -p ~/.ssh && ssh-keyscan github.com >> ~/.ssh/known_hosts
+# Configure private repos
 ENV GOPRIVATE=github.com/Layr-Labs/*
-ENV GIT_SSH_COMMAND="ssh -o StrictHostKeyChecking=accept-new"
 
+# Download dependencies
+RUN go mod download
 
-# Copy full source
-ADD . /build
+# Copy source code
+COPY cmd/ ./cmd/
 
-# Build with host ssh mounted
-RUN --mount=type=ssh make build
+# Build the performer
+RUN go build -o performer ./cmd/main.go
 
-FROM debian:stable-slim
+# Runtime image
+FROM alpine:latest
 
-COPY --from=build /build/bin/performer /usr/local/bin/performer
+# Install ca-certificates for HTTPS
+RUN apk --no-cache add ca-certificates
 
-CMD ["/usr/local/bin/performer"]
+WORKDIR /app
+
+# Copy binary from builder
+COPY --from=builder /app/performer .
+
+# Copy config and examples
+COPY config/ ./config/
+COPY examples/ ./examples/
+
+# Expose performer port
+EXPOSE 8080
+
+# Set default environment
+ENV PERFORMER_PORT=8080
+ENV PERFORMER_TIMEOUT=5s
+ENV ENV=production
+
+# Run performer
+CMD ["./performer"]

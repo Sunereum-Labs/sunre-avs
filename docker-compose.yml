@@ -1,0 +1,35 @@
+version: '3.8'
+
+services:
+  # DevKit devnet (Anvil)
+  devnet:
+    image: ghcr.io/foundry-rs/foundry:latest
+    command: anvil --host 0.0.0.0 --block-time 2
+    ports:
+      - "8545:8545"
+    networks:
+      - sunre-network
+
+  # SunRe Performer
+  performer:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    environment:
+      - PERFORMER_PORT=8080
+      - PERFORMER_TIMEOUT=5s
+      - ENV=development
+      - RPC_URL=http://devnet:8545
+    ports:
+      - "8080:8080"
+    depends_on:
+      - devnet
+    networks:
+      - sunre-network
+    volumes:
+      - ./config:/app/config
+      - ./examples:/app/examples
+
+networks:
+  sunre-network:
+    driver: bridge

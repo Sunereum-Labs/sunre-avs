@@ -9,13 +9,7 @@ import {TaskAVSRegistrarBase} from "@hourglass-monorepo/src/avs/TaskAVSRegistrar
  * @author Sunereum Labs
  * @notice SunRe AVS - Parametric Weather Insurance Platform
  * @dev Exemplary DevKit implementation following Hourglass architecture
- * 
- * This contract demonstrates DevKit best practices:
- * - Inherits from TaskAVSRegistrarBase for maximum compatibility
- * - Minimal custom code (~50 lines) leveraging DevKit abstractions
- * - Full EigenLayer integration with stake management
- * - Production-ready with comprehensive events and metadata
- * 
+
  * Key features inherited from DevKit:
  * - Operator registration/deregistration
  * - Stake allocation and slashing

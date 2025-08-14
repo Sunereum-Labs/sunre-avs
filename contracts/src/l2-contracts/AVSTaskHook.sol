@@ -8,7 +8,7 @@ import {IBN254CertificateVerifier} from "@hourglass-monorepo/src/interfaces/avs/
 /**
  * @title AVSTaskHook
  * @notice SunRe AVS - Task validation and payment hooks for weather verification
- * @dev Production-ready implementation of DevKit's IAVSTaskHook interface
+ * @dev Implementation of DevKit's IAVSTaskHook interface
  * 
  * This contract handles:
  * - Task validation and authorization
